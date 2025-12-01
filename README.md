@@ -90,17 +90,18 @@ python train/mw_train.py \
   --element Na \
   --bins 32 \
   --seed 42 \
-  --log-freq 10
+  --log-freq 100
 
-# Aluminum dataset
+# MICE training for Sodium dataset partition 16x16x16
 python train/mw_train.py \
-  -train-file coordinates_train_Na_bf0.4_bin32 \
+  --train-file coordinates_train_Na_bf0.4_bin32 \
   --val-file coordinates_val_Na_bf0.4_bin32 \
-  --run-name Al_bf0.3_bin32 \
+  --run-name Na_bf0.4_bin32 \
   --element Al \
   --bins 32 \
-  --seed 42
-  --log-freq 100
+  --seed 42 \
+  --log-freq 100 \
+  --mice -dx 16 -dy 16 -dz 16
 ```
 
 ## Parsing Results
