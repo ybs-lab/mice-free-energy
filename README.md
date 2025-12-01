@@ -3,7 +3,7 @@
 ## Machine Learning the Entropy to Estimate Free Energy Differences without Sampling Transitions
 
 ### Yamin Ben-Shimon, Barak Hirshberg, Yohai Bar-Sinai
-[![arXiv](http://img.shields.io/badge/arXiv-1612.03235-B31B1B.svg)](https://arxiv.org/abs/2510.24930)
+[![arXiv](http://img.shields.io/badge/arXiv-2510.24930-B31B1B.svg)](https://arxiv.org/abs/2510.24930)
 
 The tooling in this repository reproduces the data preparation and neural-network pipelines used for the entropy-learning workflow described in [arXiv:2510.24930](https://arxiv.org/abs/2510.24930). It includes scripts for packing LAMMPS trajectories into HDF5, voxelizing atomic configurations, and training mutual-information estimators on the generated tensors.
 
