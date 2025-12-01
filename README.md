@@ -97,7 +97,7 @@ python train/mw_train.py \
   --train-file coordinates_train_Na_bf0.4_bin32 \
   --val-file coordinates_val_Na_bf0.4_bin32 \
   --run-name Na_bf0.4_bin32 \
-  --element Al \
+  --element Na \
   --bins 32 \
   --seed 42 \
   --log-freq 100 \
