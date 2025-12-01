@@ -89,7 +89,8 @@ python train/mw_train.py \
   --run-name Na_bf0.4_bin32 \
   --element Na \
   --bins 32 \
-  --seed 42
+  --seed 42 \
+  --log-freq 10
 
 # Aluminum dataset
 python train/mw_train.py \
@@ -99,6 +100,7 @@ python train/mw_train.py \
   --element Al \
   --bins 32 \
   --seed 42
+  --log-freq 100
 ```
 
 ## Parsing Results

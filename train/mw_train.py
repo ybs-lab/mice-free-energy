@@ -7,7 +7,7 @@ import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
 
-from ml_colvar import MultiWorkerDataLoad, CNNMINE3X_dropout, CNNMINE2X_dropout, batchTraining, CNNMINE4X_dropout, CNNMINE5X_dropout
+from ml_colvar import MultiWorkerDataLoad, batchTraining, CNNMINE4X_dropout
 from params import res_params, mice_params
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -39,6 +39,7 @@ def parse_arguments():
     parser.add_argument('--val-file', type=str, default=None, help='Validation dataset filename inside data directory (with or without .npy)')
     parser.add_argument('--data-dir', type=str, default=str(DEFAULT_COORDS_DIR), help='Directory containing coordinate tensors')
     parser.add_argument('--nsamples', type=int, default=None, help='Optional limit on the number of samples per split')
+    parser.add_argument('--log-freq', type=int, default=2000, help='Logging frequency in number of batches')
     return parser.parse_args()
 
 def init_seed(seed):
@@ -171,7 +172,7 @@ def get_hyperparameters(parser, device):
             hp['mi_dim'] = -2
         elif parser.dx > parser.dy :
             hp['mi_dim'] = -3
-    hp['log_freq'] = 2000
+    hp['log_freq'] = parser.log_freq
     hp['in_batch_shuffle'] = False
     
     if not parser.mice:
@@ -183,22 +184,12 @@ def get_hyperparameters(parser, device):
                 for w in ['w1', 'w2', 'w3', 'w4', 'w5']:
                     if w in params:
                         hp[w] = params[w]
-                if hp['model_arch'] == 'CNNMINE2X_dropout':
-                    hp['model'] = CNNMINE2X_dropout(n=hp['width'], k=hp['multiplicity'], 
-                                                    w1=hp['w1'], kernel=2, dropoutfc=hp['dropoutfc'], 
-                                                    dropoutconv=hp['dropoutconv'], initializations=hp['initialization']).to(device)
-                elif hp['model_arch'] == 'CNNMINE3X_dropout':
-                    hp['model'] = CNNMINE3X_dropout(n=hp['width'], k=hp['multiplicity'], 
-                                                    w1=hp['w1'], w2=hp['w2'], w3=hp['w3'], dropoutfc=hp['dropoutfc'], 
-                                                    dropoutconv=hp['dropoutconv'], initializations=hp['initialization']).to(device)
-                elif hp['model_arch'] == 'CNNMINE4X_dropout':
+                if hp['model_arch'] == 'CNNMINE4X_dropout':
                     hp['model'] = CNNMINE4X_dropout(n=hp['width'], k=hp['multiplicity'], 
                                                     w1=hp['w1'], w2=hp['w2'], w3=hp['w3'], w4=hp['w4'], dropoutfc=hp['dropoutfc'], 
                                                     dropoutconv=hp['dropoutconv'], initializations=hp['initialization']).to(device)
-                elif hp['model_arch'] == 'CNNMINE5X_dropout':
-                    hp['model'] = CNNMINE5X_dropout(n=hp['width'], k=hp['multiplicity'], 
-                                                    w1=hp['w1'], w2=hp['w2'], w3=hp['w3'], w4=hp['w4'], w5=hp['w5'], dropoutfc=hp['dropoutfc'], 
-                                                    dropoutconv=hp['dropoutconv'], initializations=hp['initialization']).to(device)
+                else:
+                    raise ValueError(f"Unsupported model architecture '{hp['model_arch']}'. Only 'CNNMINE4X_dropout' is supported.")
                 break
 
     if parser.mice:
@@ -211,18 +202,12 @@ def get_hyperparameters(parser, device):
                 for w in ['w1', 'w2', 'w3', 'w4']:
                     if w in params:
                         hp[w] = params[w]   
-                if hp['model_arch'] == 'CNNMINE2X_dropout':
-                    hp['model'] = CNNMINE2X_dropout(n=hp['width'], k=hp['multiplicity'], 
-                                                    w1=hp['w1'], kernel=2, dropoutfc=hp['dropoutfc'], 
-                                                    dropoutconv=hp['dropoutconv'], initializations=hp['initialization']).to(device)
-                elif hp['model_arch'] == 'CNNMINE3X_dropout':
-                    hp['model'] = CNNMINE3X_dropout(n=hp['width'], k=hp['multiplicity'], 
-                                                    w1=hp['w1'], w2=hp['w2'], w3=hp['w3'], dropoutfc=hp['dropoutfc'], 
-                                                    dropoutconv=hp['dropoutconv'], initializations=hp['initialization']).to(device)
-                elif hp['model_arch'] == 'CNNMINE4X_dropout':
+                if hp['model_arch'] == 'CNNMINE4X_dropout':
                     hp['model'] = CNNMINE4X_dropout(n=hp['width'], k=hp['multiplicity'], 
                                                     w1=hp['w1'], w2=hp['w2'], w3=hp['w3'], w4=hp['w4'], dropoutfc=hp['dropoutfc'], 
                                                     dropoutconv=hp['dropoutconv'], initializations=hp['initialization']).to(device)
+                else:
+                    raise ValueError(f"Unsupported model architecture '{hp['model_arch']}' for MICE. Only 'CNNMINE4X_dropout' is supported.")
                 model_created = True
                 break
         
