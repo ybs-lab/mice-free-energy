@@ -5,23 +5,35 @@
 ### Yamin Ben-Shimon, Barak Hirshberg, Yohai Bar-Sinai
 [![arXiv](http://img.shields.io/badge/arXiv-1612.03235-B31B1B.svg)](https://arxiv.org/abs/2510.24930)
 
-The tooling in this repository reproduces the data preparation and neural-network pipelines used for the entropy-learning workflow described in [arXiv:2510.24930](https://arxiv.org/abs/2510.24930). It includes scripts for packing LAMMPS trajectories into HDF5, voxelizing atomic configurations, and training mutual-information estimators on the generated tensors.
+This repository contains the code to reproduce the Molecular Dynamics data and the neural-network pipelines used for the entropy-learning workflow described in [arXiv:2510.24930](https://arxiv.org/abs/2510.24930).
 
-## Simulation Pipeline
+The code allows to:
+  * **Generating Molecular Dynamics trajectories** of Liquid and Solid Sodium/Aluminum. This relies on [LAMMPS](https://www.lammps.org/) for MD and on [PLUMED](https://www.plumed.org/) for and Meta-Dynamics.  
+  All necessary simulation files, molecular potentials, scripts, and generated trajectories are in the `data/` directory. 
+  * Data preparation for training: Packing LAMMPS trajectories into HDF5, voxelizing atomic configurations. Example output data is at [`data/coordinates_h5`](data/coordinates_h5)
+  * Training mutual-information estimators  
+  Scripts and hyperparameter specifications are in `train/`
+  * Collecting mutual information for free energy/entropy estimation.
+  Scripts are in [`analysis/convert_df_mice.ipynb`](analysis/convert_df_mice.ipynb)
+
+The code is modular and the repo contains sample data so that the training part can be run without having to generate MD trajectories.
+
+## Software Requirements
+
 ### Requirements
-
-- **LAMMPS:** 15 Jun 2023 development build (`patch_15Jun2023-30-gc5d9f901d9-modified`).
-- **PLUMED:** 2.8.3 (`git f1e636b5b`) with the PairEntropy plugin enabled.
 - **Python packages:** the tooling and training scripts rely on `numpy`, `torch`, `pandas`, `h5py`, `matplotlib`, `seaborn`, and `scipy`. Install them via:
   ```bash
   pip install numpy torch pandas h5py matplotlib seaborn scipy
   ```
+- **LAMMPS:** 15 Jun 2023 development build (`patch_15Jun2023-30-gc5d9f901d9-modified`).
+- **PLUMED:** 2.8.3 (`git f1e636b5b`) with the PairEntropy plugin enabled.
 
-**Note:** All scripts should be run from the main repository directory (the directory containing `data/` and `train/`).
+**Note 1:** All scripts should be run from the main repository directory (the directory containing `data/` and `train/`).
 
+## Data Generation Pipeline
 ### One-liners
 
-Build all *solid + liquid* train/val:
+Generate all *solid + liquid* train/val trajectories:
 ```bash
 ./data/bin/run_all.sh -D m_Na365 -t 365 -n 6 -e Na
 ./data/bin/run_all.sh -D m_Al933 -t 900 -n 6 -e Al
@@ -77,7 +89,7 @@ This step produces `.npy` tensors that are used directly in the neural network t
 
 ## Training The Neural Network
 
-The training scripts now load `.npy` tensors from `data/coordinates` directly (no Weights & Biases required). By default the trainer looks for `coordinates_train_<ELEMENT>_bf<BIN>_bin<BINS>.npy` and the matching validation file, but you can override the filenames explicitly.
+The training scripts now load `.npy` tensors from `data/coordinates` directly. By default the trainer looks for `coordinates_train_<ELEMENT>_bf<BIN>_bin<BINS>.npy` and the matching validation file, but you can override the filenames explicitly.
 
 Example runs that train on the provided datasets:
 
@@ -104,7 +116,7 @@ python train/mw_train.py \
   --mice -dx 16 -dy 16 -dz 16
 ```
 
-## Parsing Results
+## Collecting the results for free energy calculation
 
 Parse training results from metrics files and create a DataFrame for analysis:
 
