@@ -1,3 +1,13 @@
+"""Train RES/MICE mutual-information CNNs on voxelized atomic data.
+
+This is the main training script: 
+it parses a compact CLI describing the dataset, model variant, and seed; 
+loads the corresponding coordinate tensors from ``data/coordinates``; 
+builds the CNN from hyperparameter tables in ``params.py``; 
+and calls ``batchTraining`` from ``ml_colvar.py``.
+Metrics, logs, and checkpoints are written under ``train/``.
+"""
+
 import time
 import argparse
 from pathlib import Path
@@ -24,6 +34,7 @@ def get_device():
         return torch.device('cpu')
 
 def parse_arguments():
+    """Declare the CLI needed to reproduce the training jobs exactly."""
     parser = argparse.ArgumentParser(description='Train a CNN on coordinate datasets.')
     parser.add_argument('--run-name', type=str, default=None, help='Identifier for checkpoints and logs')
     parser.add_argument('--seed', type=int, default=12345, help='Seed value')
@@ -43,6 +54,7 @@ def parse_arguments():
     return parser.parse_args()
 
 def init_seed(seed):
+    """Fix all RNG streams so MI curves are reproducible from CLI alone."""
     np.random.seed(seed)
     torch.manual_seed(seed) 
     if torch.cuda.is_available():
@@ -50,6 +62,7 @@ def init_seed(seed):
         torch.backends.cudnn.deterministic = True
 
 def load_data(nsamples, mice, dx, dy, dz, data_dir, train_filename, val_filename, device):
+    """Memory-map the datasets and convert only the requested slice to tensors."""
     data_dir = Path(data_dir)
     train_path = data_dir / f"{train_filename}.npy"
     val_path = data_dir / f"{val_filename}.npy"
@@ -79,6 +92,7 @@ def load_data(nsamples, mice, dx, dy, dz, data_dir, train_filename, val_filename
     
     # Determine final shape after slicing
     if nsamples is not None:
+        # Limit sample count early to avoid wasting work on mmap views we will drop.
         train_shape = (min(nsamples, train_shape[0]),) + train_shape[1:]
         val_shape = (min(nsamples, val_shape[0]),) + val_shape[1:]
     
@@ -143,9 +157,11 @@ def load_data(nsamples, mice, dx, dy, dz, data_dir, train_filename, val_filename
     return train_tensor, val_tensor
 
 def _default_dataset_name(split, element, bf, bins):
+    """Keep filename construction in one place so CLI defaults stay consistent."""
     return f"coordinates_{split}_{element}_bf{bf}_bin{bins}"
 
 def get_hyperparameters(parser, device):
+    """Resolve filenames and architecture hyperparameters from the parsed CLI."""
     hp = {}
     # Handle filename parsing - remove .npy extension if present, but preserve dots in the base name
     if parser.train_file:
@@ -172,6 +188,7 @@ def get_hyperparameters(parser, device):
             hp['mi_dim'] = -2
         elif parser.dx > parser.dy :
             hp['mi_dim'] = -3
+        # Negative indices instruct my_collate which spatial axis to use for MI.
     hp['log_freq'] = parser.log_freq
     hp['in_batch_shuffle'] = False
     
@@ -230,6 +247,7 @@ def get_hyperparameters(parser, device):
     return hp
            
 def main():
+    """Wire CLI args into data loading, training loop, and artifact logging."""
     device = get_device()
     print(f"Using device: {device}")
     hp = get_hyperparameters(parser, device)

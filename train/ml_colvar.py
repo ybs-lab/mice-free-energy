@@ -1,3 +1,16 @@
+"""Mutual-information estimators, data loaders, and training loops.
+
+This module implements the low-level building blocks used by ``mw_train.py``:
+
+- ``MultiWorkerDataLoad`` and ``DefaultDataLoad`` construct joint/marginal
+  batches from voxelized coordinate tensors.
+- ``CNNMINE4X_dropout`` defines the 3D CNN architecture used as the MI
+  critic.
+- ``trainBatch``, ``valBatch``, ``batchTraining`` and helpers implement the
+  actual optimization of the mutual information lower bound, including
+  numerically stable and optionally unbiased objectives.
+"""
+
 import numpy as np
 import torch
 from torch import nn
@@ -6,6 +19,7 @@ from time import time
 from torch.utils.checkpoint import checkpoint
 
 class EarlyStopper:
+    """Utility to stop training when the validation MI stops improving."""
     def __init__(self, patience=1, min_delta=0):
         self.patience = patience
         self.min_delta = min_delta
@@ -27,6 +41,7 @@ class EarlyStopper:
         return False
     
 class DefaultDataLoad:
+    """Single-process data loader that builds joint/marginal MI batches."""
     def __init__(self, data):
         self.data = data
         self.len = self.data.shape[0]
@@ -45,6 +60,7 @@ class DefaultDataLoad:
 
   
 class MultiWorkerDataLoad(Dataset):
+    """Torch Dataset that supports multi-worker MI batch construction."""
     def __init__(self, data, inBatchShuffle=False):
         self.data = data.float() if isinstance(data, torch.Tensor) else torch.from_numpy(data).float()
         self.k = int(data.shape[-1]/2)
@@ -156,6 +172,7 @@ class CNNMINE4X_dropout(nn.Module):
 
 
 def trainBatch(epoch, batch, model, optimizer, ma_et, ma_rate, unbiased=True, stable=False, mixed_precision=False):
+    """Run a single optimization step on one joint/marginal batch."""
     model.train()
     optimizer.zero_grad()
     joint, marginal = torch.split(batch, 1, dim=1)
@@ -230,6 +247,7 @@ def trainBatch(epoch, batch, model, optimizer, ma_et, ma_rate, unbiased=True, st
 
 
 def valBatch(batch, model,stable=False):
+    """Evaluate the MI lower bound on a validation batch (no gradients)."""
     model.eval()
     with torch.no_grad():
         joint, marginal = torch.split(batch, 1, dim=1)
@@ -247,6 +265,7 @@ def valBatch(batch, model,stable=False):
 
 
 def batchEvaluation(dataLoader, model, batches, log_freq=-1, stable=False):
+    """Compute MI estimates over a fixed number of batches."""
     model.eval()
     valMIlb = []
     for batch in range(batches):
@@ -264,6 +283,7 @@ def batchTraining(trainDataLoader, valDataLoader, model, optimizer,
                      batches=3000, log_freq=-1, ma_rate=0.001, 
                      unbiased=True, stable=False, model_filename=None,
                      ma_et_start=1., limit=0, device=None):
+    """Main training loop used by mw_train: iterates over batches and logs MI."""
     if device is None:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
@@ -329,6 +349,7 @@ def batchTraining(trainDataLoader, valDataLoader, model, optimizer,
 def multiWorkerTrain(trainDataLoader, valDataLoader, model, optimizer, earlyStopper,
                      epochs=3000, batch_size=32, log_freq=-1, ma_rate=0.001, 
                      unbiased=True, timing=False, stable=False, limit=0):
+    """Alternative epoch-based training loop (not used by mw_train by default)."""
     
     # autograd.set_detect_anomaly(True)
     

@@ -11,7 +11,6 @@ The tooling in this repository reproduces the data preparation and neural-networ
 ### Requirements
 
 - **LAMMPS:** 15 Jun 2023 development build (`patch_15Jun2023-30-gc5d9f901d9-modified`).
-- **PLUMED:** 2.8.3 (`git f1e636b5b`) with the PairEntropy plugin enabled.
 - **Python packages:** the tooling and training scripts rely on `numpy`, `torch`, `pandas`, `h5py`, `matplotlib`, `seaborn`, and `scipy`. Install them via:
   ```bash
   pip install numpy torch pandas h5py matplotlib seaborn scipy

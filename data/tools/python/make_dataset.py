@@ -1,3 +1,5 @@
+"""CLI wrapper around ``DataGen`` to build voxel datasets from coordinates.h5.
+"""
 
 import argparse
 from pathlib import Path
@@ -10,7 +12,7 @@ CHEM = {
 }
 
 def detect_split_tag(h5_path: Path) -> str | None:
-    """Return 'train' or 'val' if the path hints at a split."""
+    """Heuristically return 'train' or 'val' if the file path hints at a split."""
     markers = ("train", "val")
     name_chain = [h5_path.stem] + [parent.name for parent in h5_path.parents]
     for name in name_chain:
@@ -22,6 +24,7 @@ def detect_split_tag(h5_path: Path) -> str | None:
 
 
 def main():
+    """Parse CLI arguments and drive HDF5→voxel→.npy dataset generation."""
     p = argparse.ArgumentParser(description="Create OneHot voxel datasets from positions.h5")
     p.add_argument("--h5", required=True, help="Path to positions.h5 file")
     p.add_argument("--dataset-key", default=None, help="Optional dataset path inside the HDF5 (auto-detect if omitted)")

@@ -1,4 +1,21 @@
 #!/usr/bin/env python3
+"""Pack per-seed LAMMPS dump files into a single HDF5 of positions.
+
+This utility packs raw LAMMPS trajectories into the
+coordinate HDF5 files:
+
+- For each seed listed in a seeds file, it discovers the first
+  ``dump/dump*.lammpstrj`` file under the dataset directory.
+- It parses the trajectory into time frames, skipping an initial
+  equilibration window, and reorders atoms by ID so frames are
+  consistent.
+- All frames for a given seed are written to an extensible dataset
+  ``<seed>/positions`` in an output HDF5 with lightweight metadata
+  (phase, temperature, number of atoms, number of frames).
+
+The HDF5 is written under ``data/coordinates_h5/<dataset>/`` by default.
+"""
+
 import argparse, os, re, sys, glob, h5py, numpy as np
 
 HDR_TS = "ITEM: TIMESTEP"
@@ -7,6 +24,7 @@ HDR_BB = "ITEM: BOX BOUNDS"
 HDR_AT = "ITEM: ATOMS"
 
 def parse_dump_frames(path, skip_frames=0):
+    """Yield (frame_index, positions) arrays from a single LAMMPS dump file."""
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         line = f.readline()
         frame = -1
@@ -59,7 +77,9 @@ def parse_dump_frames(path, skip_frames=0):
 
             line = f.readline()
 
-def pack_dataset_to_h5(dataset_dir, seeds, output, phase=None, temperature=None, compression="lzf", chunk=128, skip_frames=200):
+def pack_dataset_to_h5(dataset_dir, seeds, output, phase=None, temperature=None,
+                       compression="lzf", chunk=128, skip_frames=200):
+    """Pack all per-seed dump files in a dataset into a single HDF5 file."""
     import h5py
     total_seeds = len(seeds)
     print(f"[INFO] Processing {total_seeds} seed(s)...", file=sys.stderr)
@@ -126,6 +146,7 @@ def pack_dataset_to_h5(dataset_dir, seeds, output, phase=None, temperature=None,
                 print(f"  [{seed_idx}/{total_seeds}] {seed}: {frames_written} frames written", file=sys.stderr)
 
 def read_seed_list(path):
+    """Read a plain-text file of seeds (one per line), stripping empties."""
     import os
     print(f"Reading seeds from {path}", file=sys.stderr)
     with open(path, "r", encoding="utf-8") as f:
@@ -134,6 +155,7 @@ def read_seed_list(path):
     return seeds
 
 def main():
+    """CLI entry point that locates the repo root and writes coordinates.h5."""
     ap = argparse.ArgumentParser(description="Pack LAMMPS lammpstrj coordinates into a single HDF5 (group per seed).")
     ap.add_argument("--dataset", "-d", required=True, help="Dataset directory containing <seed>/dump/dump*.lammpstrj")
     ap.add_argument("--seeds-file", "-s", required=True, help="Path to seed list file used for the dataset")

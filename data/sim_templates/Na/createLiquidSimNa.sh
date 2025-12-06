@@ -16,7 +16,6 @@ mkdir dump
 mkdir restart
 mkdir data
 mkdir colvar
-mkdir plumed
 
 ##########################################################################
 
@@ -77,15 +76,6 @@ run             10000
 unfix           1
 unfix           2 
 
-# fix             2 all nph &
-#                 x \${pressure} \${pressure} \${pressureDamp} &
-#                 y \${pressure} \${pressure} \${pressureDamp} &
-#                 z \${pressure} \${pressure} \${pressureDamp} &
-#                 xy 0.0 0.0 \${pressureDamp} &
-#                 yz 0.0 0.0 \${pressureDamp} &
-#                 xz 0.0 0.0 \${pressureDamp} &
-#                 couple xyz
-fix             1 all plumed plumedfile ../plumedNa.dat outfile plumed/plumed\${temperature}.out
 fix             2 all nph iso \${pressure} \${pressure} \${pressureDamp}
 fix             3 all temp/csvr \${temperature} \${temperature} \${tempDamp} \${seed}
 fix             4 all momentum 10000 linear 1 1 1 angular

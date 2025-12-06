@@ -117,16 +117,6 @@ seeds_file="$(cd "$(dirname "$seeds_file")" && pwd)/$(basename "$seeds_file")"
 # Save resolved seeds_file path before we change directories
 resolved_seeds_file="${seeds_file}"
 
-# Copy element-specific plumed file next to dataset
-plumed_name="plumed${element}.dat"
-plumed_src="${sim_templates_root}/${plumed_name}"
-plumed_dst="${dataset_dir}/${plumed_name}"
-if [ -f "${plumed_src}" ] && [ ! -f "${plumed_dst}" ]; then
-  cp "${plumed_src}" "${plumed_dst}"
-elif [ ! -f "${plumed_dst}" ]; then
-  echo "${plumed_name} not found (looked in ${plumed_src})" >&2
-fi
-
 pushd "${dataset_dir}" >/dev/null
 
 export PHASE="${phase}"

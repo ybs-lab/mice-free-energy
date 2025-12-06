@@ -1,14 +1,22 @@
+"""Voxelization utility for atomic coordinates stored in HDF5.
+
+``DataGen`` loads atomic positions from an HDF5 file, applies geometric transforms
+(rotation, centering and random shifts), crops a cubic region, and
+voxelizes atoms into boolean occupancy grids of shape
+``(bin_num, bin_num, bin_num)``.
+
+The resulting tensors are written as ``.npy`` files and are the direct input to
+the mutual-information trainers in ``train/``.
+"""
 
 import numpy as np
 from pathlib import Path
 import h5py
 import sys
 
+
 class DataGen:
-    # Minimal dataset generator for atomic positions stored in an HDF5 file.
-    # - Only supports OneHot voxelization (KDE removed).
-    # - No sigma parameter.
-    # - Designed for datasets shaped (N, M, 3) where the last dim are xyz.
+    """One-hot voxel dataset generator for (N, M, 3) atomic coordinate arrays."""
     def __init__(
         self,
         bin_num: int,
@@ -47,8 +55,7 @@ class DataGen:
     # ------------------------- Loading -------------------------
 
     def _find_positions_dataset(self, h5: h5py.File, dataset_key: str | None):
-        # Locate a dataset that ends with dimension 3 (x,y,z). If dataset_key is provided,
-        # try it first; otherwise auto-detect the first dataset with shape (..., 3).
+        """Locate a positions dataset with trailing xyz dimension in an HDF5 file."""
         if dataset_key is not None:
             if dataset_key in h5:
                 ds = h5[dataset_key]
@@ -76,8 +83,7 @@ class DataGen:
                          "Please pass --dataset-key to specify the dataset explicitly.")
 
     def _collect_all_seed_positions(self, h5: h5py.File):
-        # Collect positions from all seed groups (structure: <seed>/positions)
-        # Returns a list of arrays, one per seed
+        """Collect ``<seed>/positions`` datasets into a list, one array per seed."""
         all_positions = []
         for key in h5.keys():
             if isinstance(h5[key], h5py.Group):
@@ -88,6 +94,7 @@ class DataGen:
         return all_positions
 
     def load_from_h5(self, path: str | Path, dataset_key: str | None = None):
+        """Load coordinates from an HDF5 file into ``self.coords`` as (N, M, 3)."""
         path = Path(path)
         if not path.exists():
             raise FileNotFoundError(f"HDF5 file not found: {path}")
@@ -121,11 +128,11 @@ class DataGen:
     # ------------------------- Geometry helpers -------------------------
 
     def calculateCenter(self, coords: np.ndarray) -> np.ndarray:
-        # Center of the bounding box (diagonally opposite corners average).
+        """Center of the bounding box (average of min/max corners)."""
         return (coords.max(axis=0) + coords.min(axis=0)) / 2.0
 
     def rotateCoordinates(self):
-        # Random 3D rotations per-sample.
+        """Apply random 3D rotations to each sample (optionally about its center)."""
         n = len(self.coords)
         phis = np.random.uniform(-np.pi/2, np.pi/2, size=(n, 3)).astype(np.float32)
         # Build rotation matrices Rx, Ry, Rz in vectorized form
@@ -158,7 +165,7 @@ class DataGen:
     # ------------------------- Core pipeline -------------------------
 
     def _filter_cube(self, coords: np.ndarray, middle: np.ndarray) -> np.ndarray:
-        # Crop to a cube of side `self.length` centered at `middle`.
+        """Crop atoms to a cube of side ``self.length`` centered at ``middle``."""
         l = self.length
         x_ok = (coords[:, 0] > middle[0] - l/2) & (coords[:, 0] < middle[0] + l/2)
         y_ok = (coords[:, 1] > middle[1] - l/2) & (coords[:, 1] < middle[1] + l/2)
@@ -169,7 +176,7 @@ class DataGen:
         return coords[mask]
 
     def _one_hot_voxels(self, coords: np.ndarray, middle: np.ndarray) -> np.ndarray:
-        # Voxelize points into a (bin_num, bin_num, bin_num) boolean grid.
+        """Voxelize atomic positions into a boolean occupancy grid."""
         n = self.bin_num
         l = self.length
         max_val = middle + l/2
@@ -183,7 +190,7 @@ class DataGen:
         return vox
 
     def process(self):
-        # Center, (optionally) rotate & shift, crop, and voxelize to OneHot grids.
+        """Center/augment/crop coordinates and voxelize them into one-hot grids."""
         if self.coords is None:
             raise RuntimeError("No coordinates loaded. Call load_from_h5(...) first.")
 
@@ -219,6 +226,7 @@ class DataGen:
     # ------------------------- Saving -------------------------
 
     def save_tensor(self, out_path: str | Path) -> None:
+        """Persist the generated voxel grids to a ``.npy`` file on disk."""
         out_path = Path(out_path)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         with open(out_path, "wb") as f:
