@@ -1,5 +1,3 @@
-# mice-fee
-
 ## Machine Learning the Entropy to Estimate Free Energy Differences without Sampling Transitions
 
 ### Yamin Ben-Shimon, Barak Hirshberg, Yohai Bar-Sinai
